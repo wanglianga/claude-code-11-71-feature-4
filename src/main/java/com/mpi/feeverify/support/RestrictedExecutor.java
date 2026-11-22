@@ -39,6 +39,15 @@ public class RestrictedExecutor {
      */
     public <T> T inRestrictedTx(int statementTimeoutMs, int lockTimeoutMs, String workMem,
                                 Function<TxSession, T> body) {
+        return inRestrictedTx(statementTimeoutMs, lockTimeoutMs, workMem, 2, body);
+    }
+
+    /**
+     * 同上，但并行度由调用方指定（调度器按资源策略的 max_parallel_workers 设置）。
+     * 所有 SET LOCAL 只作用于本事务，分区提交后即失效，不影响其他分区与会话。
+     */
+    public <T> T inRestrictedTx(int statementTimeoutMs, int lockTimeoutMs, String workMem,
+                                int maxParallelWorkers, Function<TxSession, T> body) {
         TransactionTemplate txTemplate = new TransactionTemplate(txManager);
         txTemplate.setReadOnly(true);
         return txTemplate.execute(status -> {
@@ -46,7 +55,8 @@ public class RestrictedExecutor {
             np.getJdbcTemplate().execute("SET LOCAL statement_timeout = " + statementTimeoutMs);
             np.getJdbcTemplate().execute("SET LOCAL lock_timeout = " + lockTimeoutMs);
             np.getJdbcTemplate().execute("SET LOCAL work_mem = '" + workMem + "'");
-            np.getJdbcTemplate().execute("SET LOCAL max_parallel_workers_per_gather = 2");
+            np.getJdbcTemplate().execute("SET LOCAL max_parallel_workers_per_gather = "
+                    + Math.max(0, maxParallelWorkers));
             Integer pid = np.getJdbcTemplate().queryForObject("SELECT pg_backend_pid()", Integer.class);
             return body.apply(new TxSession(np, pid == null ? -1 : pid));
         });

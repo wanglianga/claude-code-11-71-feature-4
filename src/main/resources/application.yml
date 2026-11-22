@@ -37,3 +37,18 @@ verify:
   # 路由接口单次返回的最大明细行数（完整行数在 rowCount 中体现）
   router:
     max-return-rows: 200
+  # 资源调度：白天/夜间时段与合并边界判定
+  scheduling:
+    # 白天时段（含边界），其余为夜间；格式 HH:mm
+    day-start: "08:00"
+    day-end: "20:00"
+    # 交互时限：预估扫描耗时超过该值即视为非交互，可按结果体积合并执行
+    interactive-budget-ms: 1500
+    # 预估模型：每毫秒可扫描行数（1 = 每行约 1ms）
+    planning-rows-per-ms: 1.0
+    # 重复率统计窗口
+    duplicate-window-ms: 300000
+    # 结果载荷默认保留时长（订阅 keepAliveMs 可覆盖）
+    default-keep-alive-ms: 60000
+    # 结果载荷绝对保留上限，超过由回收器释放
+    max-payload-age-ms: 3600000
